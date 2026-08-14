@@ -5,12 +5,12 @@ import {
   containsNativeCompactCheckpoint,
 } from './checkpoint.js'
 
-const DEFAULT_MODE = 'probe'
+const DEFAULT_MODE = 'manual'
 
 export function resolveNativeCompactConfig(config = {}) {
   const mode = config.nativeCompactMode ?? DEFAULT_MODE
-  if (mode !== 'probe' && mode !== 'manual' && mode !== 'automatic') {
-    throw new TypeError('nativeCompactMode must be "probe", "manual", or "automatic"')
+  if (mode !== 'manual' && mode !== 'automatic') {
+    throw new TypeError('nativeCompactMode must be "manual" or "automatic"')
   }
   return Object.freeze({ mode })
 }
@@ -85,52 +85,4 @@ export function installManualCompactCommand(ctx) {
       },
     })
   }, 'native compact manual command lifecycle')
-}
-
-/**
- * Install the explicit native-compaction diagnostic inside the OAuth-owning
- * plugin. It never replaces the model-visible surface or registers
- * `ctx.compaction`; normal command lifecycle events remain log-only.
- */
-export function installNativeCompactProbe(ctx, transport, config = {}) {
-  const resolved = resolveNativeCompactConfig(config)
-  const capability = transport.describe()
-  const active = new Set()
-
-  ctx.effect(function* () {
-    yield async () => {
-      await Promise.allSettled(active)
-    }
-    yield ctx.commands.register({
-      name: 'native-compact-probe',
-      description: '验证 Codex OAuth 原生压缩及 opaque checkpoint 回放（不替换对话历史）',
-      input: { hint: '可选：Codex 模型名；留空使用 transport 默认模型' },
-      recordInput: false,
-      handler(invocation) {
-        const model = invocation.rawInput.trim() || capability.defaultModel
-        if (model === undefined) {
-          return {
-            kind: 'error',
-            text: '没有可用的 Codex 模型；请使用 /native-compact-probe <model>。',
-          }
-        }
-        const operation = transport.probe({ model, signal: invocation.signal })
-          .then((result) => ({
-            kind: 'success',
-            text: `Native compact MVP verified: ${result.protocol}; model ${result.model}; ${result.itemCount} continuation item(s); JSON persistence round-trip and opaque-only replay both passed.`,
-          }))
-          .catch((error) => ({
-            kind: 'error',
-            text: `Native compact probe failed: ${error instanceof Error ? error.message : String(error)}`,
-          }))
-        active.add(operation)
-        operation.then(() => active.delete(operation), () => active.delete(operation))
-        return operation
-      },
-    })
-  }, 'codex native compact probe command lifecycle')
-
-  ctx.logger.info(
-    `dsh-llm-codex-auth-native-compact-image: native compact ${capability.remoteCompaction} transport ready in ${resolved.mode} mode; use /native-compact-probe for the explicit network test`,
-  )
 }

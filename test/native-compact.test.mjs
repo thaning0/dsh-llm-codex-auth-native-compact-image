@@ -7,7 +7,6 @@ import { nativeCompactCheckpointSource } from '../src/checkpoint.js'
 import {
   installManualCompactCommand,
   installNativeCheckpointGuard,
-  installNativeCompactProbe,
   resolveNativeCompactConfig,
 } from '../src/native-compact.js'
 
@@ -39,49 +38,16 @@ function context() {
   }
 }
 
-test('native compact supports probe, manual, and automatic modes', () => {
-  assert.deepEqual(resolveNativeCompactConfig(), { mode: 'probe' })
-  assert.deepEqual(resolveNativeCompactConfig({ nativeCompactMode: 'probe' }), { mode: 'probe' })
+test('native compact supports manual and automatic production modes', () => {
+  assert.deepEqual(resolveNativeCompactConfig(), { mode: 'manual' })
   assert.deepEqual(resolveNativeCompactConfig({ nativeCompactMode: 'manual' }), { mode: 'manual' })
   assert.deepEqual(resolveNativeCompactConfig({ nativeCompactMode: 'automatic' }), { mode: 'automatic' })
-  assert.throws(
-    () => resolveNativeCompactConfig({ nativeCompactMode: 'active' }),
-    /nativeCompactMode must be "probe", "manual", or "automatic"/,
-  )
-})
-
-test('single OAuth plugin installs explicit opaque replay probe', async () => {
-  let probeCalls = 0
-  const transport = {
-    describe() {
-      return { provider: 'codex-oauth', remoteCompaction: 'v2', defaultModel: 'gpt-5.4' }
-    },
-    async probe({ model }) {
-      probeCalls += 1
-      assert.equal(model, 'gpt-5.4')
-      return {
-        protocol: 'responses.compaction-trigger.v2',
-        model,
-        itemCount: 2,
-        persistenceRoundTripVerified: true,
-        replayVerified: true,
-      }
-    },
+  for (const mode of ['probe', 'active']) {
+    assert.throws(
+      () => resolveNativeCompactConfig({ nativeCompactMode: mode }),
+      /nativeCompactMode must be "manual" or "automatic"/,
+    )
   }
-  const ctx = context()
-  installNativeCompactProbe(ctx, transport)
-
-  assert.equal(ctx.command.name, 'native-compact-probe')
-  assert.equal(ctx.command.recordInput, false)
-  assert.equal(probeCalls, 0)
-  const result = await ctx.command.handler({
-    rawInput: '',
-    signal: new AbortController().signal,
-  })
-  assert.equal(result.kind, 'success')
-  assert.match(result.text, /opaque-only replay both passed/)
-  assert.equal(probeCalls, 1)
-  assert.match(ctx.logs[0], /native compact v2 transport ready in probe mode/)
 })
 
 test('global guard rejects native checkpoint on a foreign provider before next', async () => {

@@ -95,7 +95,7 @@ async function route(path) {
 
 // ── apply ────────────────────────────────────────────────────────────────────
 console.log('plugin exports:', Object.keys(plugin).join(', '))
-plugin.apply(ctx, { provider: 'codex-oauth', providerId: 'openai-codex', credentialRef: 'OPENAI_CODEX_OAUTH', nativeCompactMode: 'probe' })
+plugin.apply(ctx, { provider: 'codex-oauth', providerId: 'openai-codex', credentialRef: 'OPENAI_CODEX_OAUTH' })
 
 // ── provider route ──────────────────────────────────────────────────────────
 check('registered one provider route', registered.providers.length === 1 && registered.providers[0] === 'codex-oauth')
@@ -127,11 +127,10 @@ check('status 未登录 after logout', afterLogout.body.connected === false)
 const notFound = await route('/codex-oauth/nope')
 check('unknown subpath 404', notFound.status === 404)
 
-// ── commands in dependency-light probe smoke ────────────────────────────────
+// ── production conversation commands ───────────────────────────────────────
 const names = registered.commands.map((c) => c.name).sort()
-check('commands include auth helpers and explicit probe', JSON.stringify(names) === JSON.stringify(['codex-logout', 'codex-status', 'native-compact-probe']), names.join(', '))
+check('commands expose only auth status helpers', JSON.stringify(names) === JSON.stringify(['codex-logout', 'codex-status']), names.join(', '))
 check('no conversation-side login command', !registered.commands.some((c) => c.name === 'codex-login'))
-check('native compact probe is explicit and does not run during apply', registered.commands.some((c) => c.name === 'native-compact-probe'))
 const statusDef = registered.commands.find((c) => c.name === 'codex-status')
 const result = await statusDef.handler({})
 check('codex-status points to settings page when 未登录', result.kind === 'success' && /设置页/.test(result.text ?? ''), result.text)

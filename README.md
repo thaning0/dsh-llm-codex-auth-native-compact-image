@@ -6,7 +6,7 @@
 
 在 dsh（DeepSeek Harness）里使用你的 **ChatGPT / Codex 订阅**（Plus / Pro / Business / Edu）。插件通过 OpenAI Codex 的 OAuth 流程登录 ChatGPT 账号，把订阅额度暴露成 dsh 的 `codex-oauth` 模型提供方。
 
-本插件同时集成 provider-native compaction。同一个 npm 包分别提供 Host 认证/transport 入口和 agent-scoped compaction 入口；`codex-native` preset 用后者替换 `compaction-basic`，使 `/compact`、80% 上下文压力触发和 overflow 恢复都使用 opaque native checkpoint。`/native-compact-probe [model]` 保留为显式诊断。完整契约见 [`docs/native-compact-design.md`](docs/native-compact-design.md)。原版 OAuth 插件与本插件不得同时加载，否则会重复注册同一 provider。
+本插件同时集成 provider-native compaction。同一个 npm 包分别提供 Host 认证/transport 入口和 agent-scoped compaction 入口；`codex-native` preset 用后者替换 `compaction-basic`，使 `/compact`、80% 上下文压力触发和 overflow 恢复都使用 opaque native checkpoint。完整契约见 [`docs/native-compact-design.md`](docs/native-compact-design.md)。原版 OAuth 插件与本插件不得同时加载，否则会重复注册同一 provider。
 
 > ⚠️ **风险提示**：本插件调用 ChatGPT 网页版后端（`chatgpt.com/backend-api`），这是一个未公开、官方不支持的接口，违反 OpenAI 服务条款的风险真实存在，可能导致账号受限。请自行评估后使用。
 
@@ -121,7 +121,7 @@ npx @deepseek-ai/dsh plugin --profile web add file:/path/to/dsh-llm-codex-auth-n
 | `src/checkpoint.js` | 版本化 checkpoint carrier、lossless JSON 与 provider/model/identity 兼容性验证 |
 | `src/engine.js` | native-aware 压力计量、manual/pressure/overflow `ctx.compaction`、tool-pairing 边界、日志 bracket、replacement 与 Scheme A flush |
 | `src/compaction-plugin.js` | agent-scoped preset 入口：发布隔离的 `ctx.compaction`、`/compact` 和自动触发监听器 |
-| `src/native-compact.js` | `/compact`、`/native-compact-probe` 与跨 provider 的联网前 replay 守卫 |
+| `src/native-compact.js` | `/compact` 与跨 provider 的联网前 replay 守卫 |
 | `src/store.js` | pi-ai `CredentialStore` ↔ dsh 凭据库的桥（串行化读写，token 不出宿主） |
 | `src/login.js` | 设备码登录编排（pi-ai 官方流，自动持久化凭据） |
 | `src/server.js` | 宿主 `webServer` 挂 `/codex-oauth` HTTP 路由（status / login / logout），供浏览器半调用 |

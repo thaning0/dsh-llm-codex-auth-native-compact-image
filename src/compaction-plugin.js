@@ -11,9 +11,6 @@ export const inject = ['llm', 'commands', 'tokenMeter', 'sessions', 'codexOAuthT
 export function apply(ctx, config) {
   const provider = config?.provider ?? 'codex-oauth'
   const nativeCompact = resolveNativeCompactConfig(config)
-  if (nativeCompact.mode === 'probe') {
-    throw new Error('native compaction preset entry requires nativeCompactMode "manual" or "automatic"')
-  }
   if (ctx.get('compaction') !== undefined) {
     throw new Error('native compaction preset entry cannot start while another ctx.compaction service is registered in this agent realm')
   }

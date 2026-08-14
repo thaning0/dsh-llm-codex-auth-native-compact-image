@@ -1,6 +1,6 @@
 /**
  * Host entry: OAuth credentials, Codex adapter/transport, settings routes,
- * native checkpoint replay guard, and explicit diagnostic probe.
+ * and native checkpoint replay guard.
  *
  * The same npm package exports `./compaction` for an isolated agent preset;
  * keeping the entry points separate preserves the Host/agent Cordis planes.
@@ -15,10 +15,7 @@ import { LoginManager } from './login.js'
 import { installCommands } from './commands.js'
 import { installServerRoutes } from './server.js'
 import { CodexOAuthTransport } from './transport.js'
-import {
-  installNativeCheckpointGuard,
-  installNativeCompactProbe,
-} from './native-compact.js'
+import { installNativeCheckpointGuard } from './native-compact.js'
 
 export const name = 'dsh-llm-codex-auth-native-compact-image'
 export const inject = ['llm', 'credentials', 'commands']
@@ -59,6 +56,5 @@ export function apply(ctx, config) {
   installServerRoutes(ctx, login, store, providerId)
   installCommands(ctx, login, store, providerId)
   installNativeCheckpointGuard(ctx, provider)
-  installNativeCompactProbe(ctx, transport, { ...config, nativeCompactMode: 'probe' })
   ctx.logger.info(`dsh-llm-codex-auth-native-compact-image: provider "${provider}" ready (pi-ai ${providerId}; credential ${credentialRef})`)
 }

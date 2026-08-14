@@ -82,7 +82,7 @@ Native compaction module
   ├─ agent/pre-step pressure and agent/request-error overflow recovery
   ├─ native-aware opaque replay-token pressure correction
   ├─ global foreign-provider replay guard
-  └─ explicit /native-compact-probe diagnostic
+  └─ internal probe API retained only for transport regression tests
 ```
 
 OAuth tokens, refresh tokens, raw account ids, authorization headers, and

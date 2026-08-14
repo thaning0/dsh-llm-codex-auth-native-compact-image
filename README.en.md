@@ -6,7 +6,7 @@ English | [中文](README.md)
 
 Use your **ChatGPT / Codex subscription** (Plus / Pro / Business / Edu) inside dsh (DeepSeek Harness). The plugin signs in to your ChatGPT account through the OpenAI Codex OAuth flow and exposes your subscription quota as the `codex-oauth` model provider.
 
-This plugin also integrates provider-native compaction. One npm package exposes a Host authentication/transport entry and an agent-scoped compaction entry. The `codex-native` preset replaces `compaction-basic`, so `/compact`, 80% context pressure, and overflow recovery all use opaque native checkpoints. `/native-compact-probe [model]` remains an explicit diagnostic. See [`docs/native-compact-design.md`](docs/native-compact-design.md). Do not load the upstream OAuth package and this plugin together because both own the same provider route.
+This plugin also integrates provider-native compaction. One npm package exposes a Host authentication/transport entry and an agent-scoped compaction entry. The `codex-native` preset replaces `compaction-basic`, so `/compact`, 80% context pressure, and overflow recovery all use opaque native checkpoints. See [`docs/native-compact-design.md`](docs/native-compact-design.md). Do not load the upstream OAuth package and this plugin together because both own the same provider route.
 
 > ⚠️ **Risk notice**: this plugin calls the ChatGPT web backend (`chatgpt.com/backend-api`), an undocumented, officially unsupported interface. Using it carries a real risk of violating OpenAI's terms of service and may lead to account restrictions. Evaluate it yourself before use.
 
@@ -119,7 +119,7 @@ After installing, `dsh --profile web --dump-config` (or `npx @deepseek-ai/dsh --
 | `src/checkpoint.js` | Versioned checkpoint carrier, lossless JSON, and provider/model/identity compatibility validation |
 | `src/engine.js` | Native-aware pressure metering, manual/pressure/overflow `ctx.compaction`, tool-pairing boundaries, lifecycle bracket, replacement, and Scheme A flush |
 | `src/compaction-plugin.js` | Agent-scoped preset entry that publishes isolated `ctx.compaction`, `/compact`, and automatic trigger listeners |
-| `src/native-compact.js` | `/compact`, `/native-compact-probe`, and the pre-network foreign-provider replay guard |
+| `src/native-compact.js` | `/compact` and the pre-network foreign-provider replay guard |
 | `src/store.js` | Bridge between pi-ai's `CredentialStore` and the dsh credential store (serialized read/write, tokens never leave the host) |
 | `src/login.js` | Device-code login orchestration (pi-ai's own flow, persists the credential automatically) |
 | `src/server.js` | Host `webServer` routes under `/codex-oauth` (status / login / logout) for the browser half |
