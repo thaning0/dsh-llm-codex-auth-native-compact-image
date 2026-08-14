@@ -1,4 +1,4 @@
-# dsh-llm-codex-native-compact
+# dsh-llm-codex-auth-native-compact-image
 
 [English](README.en.md) | 中文
 
@@ -12,7 +12,7 @@
 
 ## 目录
 
-- [dsh-llm-codex-native-compact](#dsh-llm-codex-native-compact)
+- [dsh-llm-codex-auth-native-compact-image](#dsh-llm-codex-auth-native-compact-image)
   - [目录](#目录)
   - [功能特性](#功能特性)
   - [安装](#安装)
@@ -58,7 +58,7 @@ node scripts/uninstall.mjs            # 从 web profile 卸载
 node scripts/uninstall.mjs headless   # 从其他 profile 卸载
 ```
 
-（若当初是用 `dsh plugin add`（pnpm）安装的，优先用官方 `dsh plugin --profile <name> remove dsh-llm-codex-native-compact`；卸载脚本也会顺带清掉 manifest 里的条目作为兜底。）
+（若当初是用 `dsh plugin add`（pnpm）安装的，优先用官方 `dsh plugin --profile <name> remove dsh-llm-codex-auth-native-compact-image`；卸载脚本也会顺带清掉 manifest 里的条目作为兜底。）
 
 ### 手动命令行安装
 
@@ -69,10 +69,10 @@ node scripts/uninstall.mjs headless   # 从其他 profile 卸载
 #   · 临时使用：把下面命令里的 dsh 换成 npx @deepseek-ai/dsh
 
 # 已全局安装 dsh 时：
-dsh plugin --profile web add file:/path/to/dsh-llm-codex-native-compact
+dsh plugin --profile web add file:/path/to/dsh-llm-codex-auth-native-compact-image
 
 # 未全局安装、临时用 npx 时：
-npx @deepseek-ai/dsh plugin --profile web add file:/path/to/dsh-llm-codex-native-compact
+npx @deepseek-ai/dsh plugin --profile web add file:/path/to/dsh-llm-codex-auth-native-compact-image
 
 # 重启 dsh web 使新 bundle 生效
 ```
@@ -88,7 +88,7 @@ npx @deepseek-ai/dsh plugin --profile web add file:/path/to/dsh-llm-codex-native
 
 ### 验证安装完成
 
-安装后 `dsh --profile web --dump-config`（或 `npx @deepseek-ai/dsh --profile web --dump-config`）应能看到 `llm-codex-native-compact` 行。
+安装后 `dsh --profile web --dump-config`（或 `npx @deepseek-ai/dsh --profile web --dump-config`）应能看到 `llm-codex-auth-native-compact-image` 行。
 
 > **更新插件代码**：`file:` 安装是硬链接快照，编辑器替换式写入不会被 pnpm 感知，直接重跑
 > `add` 可能不会刷新。推荐先停止 dsh，再从仓库运行一键脚本；它会刷新当前真正生效的安装位置，
@@ -98,8 +98,8 @@ npx @deepseek-ai/dsh plugin --profile web add file:/path/to/dsh-llm-codex-native
 > ```
 > 如果坚持只使用 pnpm，则必须完整 remove/add：
 > ```sh
-> dsh plugin --profile web remove dsh-llm-codex-native-compact
-> dsh plugin --profile web add file:/path/to/dsh-llm-codex-native-compact
+> dsh plugin --profile web remove dsh-llm-codex-auth-native-compact-image
+> dsh plugin --profile web add file:/path/to/dsh-llm-codex-auth-native-compact-image
 > # 未全局安装 dsh 时，把上面的 dsh 换成 npx @deepseek-ai/dsh
 > ```
 

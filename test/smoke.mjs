@@ -1,5 +1,5 @@
 /**
- * Unit smoke test for dsh-llm-codex-native-compact, run without booting dsh.
+ * Unit smoke test for dsh-llm-codex-auth-native-compact-image, run without booting dsh.
  * Resolves dependencies through the profile's node_modules.
  *
  * Surface covered: provider route, the /codex-oauth HTTP routes (status /
@@ -7,7 +7,7 @@
  * explicit inert native-compact probe registration, and credential-store round-trip.
  * No network is required.
  */
-import * as plugin from 'dsh-llm-codex-native-compact'
+import * as plugin from 'dsh-llm-codex-auth-native-compact-image'
 
 let failed = 0
 function check(label, ok, detail = '') {
@@ -137,7 +137,7 @@ const result = await statusDef.handler({})
 check('codex-status points to settings page when 未登录', result.kind === 'success' && /设置页/.test(result.text ?? ''), result.text)
 
 // ── credential store round-trip ─────────────────────────────────────────────
-const { DshCredentialStore } = await import('dsh-llm-codex-native-compact/src/store.js')
+const { DshCredentialStore } = await import('dsh-llm-codex-auth-native-compact-image/src/store.js')
 const store = new DshCredentialStore(ctx, 'OPENAI_CODEX_OAUTH', 'openai-codex')
 const before = await store.read('openai-codex')
 const after = await store.modify('openai-codex', async () => ({ type: 'oauth', access: 'acc', refresh: 'ref', expires: 1, accountId: 'x' }))

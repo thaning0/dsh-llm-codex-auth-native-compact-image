@@ -1,7 +1,7 @@
 {
-  "name": "dsh-llm-codex-native-compact",
+  "name": "dsh-llm-codex-auth-native-compact-image",
   "version": "0.6.0-native-auto-compact-dev",
-  "description": "Codex OAuth model provider and provider-native compaction for DeepSeek Harness.",
+  "description": "Codex OAuth provider with native compaction and image input support for DeepSeek Harness.",
   "type": "module",
   "main": "src/index.js",
   "exports": {

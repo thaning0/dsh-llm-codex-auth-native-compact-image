@@ -14,7 +14,7 @@
  * reconstruct provider-native assistant messages (signatures) for the
  * ChatGPT backend.
  *
- * @module dsh-llm-codex-native-compact/adapter
+ * @module dsh-llm-codex-auth-native-compact-image/adapter
  */
 import {
   CallId,

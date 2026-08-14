@@ -7,7 +7,7 @@
  * only write path and is serialized per provider so concurrent streams cannot
  * double-refresh a rotated token.
  *
- * @module dsh-llm-codex-native-compact/store
+ * @module dsh-llm-codex-auth-native-compact-image/store
  */
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
 

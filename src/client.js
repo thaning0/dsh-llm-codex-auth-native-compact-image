@@ -6,7 +6,7 @@
  * `settings.section` entry and talks to the host over the same-origin HTTP
  * endpoints registered by src/server.js — no typert remotes.
  *
- * @module dsh-llm-codex-native-compact/client
+ * @module dsh-llm-codex-auth-native-compact-image/client
  */
 import { createElement as h, useCallback, useEffect, useState } from 'react'
 
@@ -62,7 +62,7 @@ function CodexSection() {
   )
 }
 
-export const name = 'dsh-llm-codex-native-compact'
+export const name = 'dsh-llm-codex-auth-native-compact-image'
 export const inject = ['slots']
 
 export function apply(ctx) {

@@ -131,6 +131,6 @@ export function installNativeCompactProbe(ctx, transport, config = {}) {
   }, 'codex native compact probe command lifecycle')
 
   ctx.logger.info(
-    `dsh-llm-codex-native-compact: native compact ${capability.remoteCompaction} transport ready in ${resolved.mode} mode; use /native-compact-probe for the explicit network test`,
+    `dsh-llm-codex-auth-native-compact-image: native compact ${capability.remoteCompaction} transport ready in ${resolved.mode} mode; use /native-compact-probe for the explicit network test`,
   )
 }

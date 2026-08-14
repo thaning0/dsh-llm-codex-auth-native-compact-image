@@ -1,11 +1,11 @@
 /**
- * Stream-translation tests for the installed dsh-llm-codex-native-compact adapter:
+ * Stream-translation tests for the installed dsh-llm-codex-auth-native-compact-image adapter:
  * pi-ai event stream → dsh StreamChunks, replay metadata round-trip, error
  * classification, option assembly, and guard rails. No network, no dsh boot.
  */
 import { LlmError } from '@deepseek-ai/dsh-llm'
 import { builtinProviders } from '@earendil-works/pi-ai/providers/all'
-import { CodexAdapter } from 'dsh-llm-codex-native-compact/src/adapter.js'
+import { CodexAdapter } from 'dsh-llm-codex-auth-native-compact-image/src/adapter.js'
 
 let failed = 0
 function check(label, ok, detail = '') {

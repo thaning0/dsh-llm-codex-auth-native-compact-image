@@ -6,7 +6,7 @@
  * both are read-only against the credential store (logout only deletes the
  * stored credential; it never starts a flow). No handler ever prints a token.
  *
- * @module dsh-llm-codex-native-compact/commands
+ * @module dsh-llm-codex-auth-native-compact-image/commands
  */
 
 export function installCommands(ctx, login, store, providerId) {

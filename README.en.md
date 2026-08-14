@@ -1,4 +1,4 @@
-# dsh-llm-codex-native-compact
+# dsh-llm-codex-auth-native-compact-image
 
 English | [中文](README.md)
 
@@ -12,7 +12,7 @@ This plugin also integrates provider-native compaction. One npm package exposes 
 
 ## Table of contents
 
-- [dsh-llm-codex-native-compact](#dsh-llm-codex-native-compact)
+- [dsh-llm-codex-auth-native-compact-image](#dsh-llm-codex-auth-native-compact-image)
   - [Table of contents](#table-of-contents)
   - [Features](#features)
   - [Installation](#installation)
@@ -58,7 +58,7 @@ node scripts/uninstall.mjs            # uninstall from the web profile
 node scripts/uninstall.mjs headless   # uninstall from another profile
 ```
 
-(If you installed via `dsh plugin add` (pnpm), prefer the official `dsh plugin --profile <name> remove dsh-llm-codex-native-compact`; the uninstall script also clears the manifest entries as a fallback.)
+(If you installed via `dsh plugin add` (pnpm), prefer the official `dsh plugin --profile <name> remove dsh-llm-codex-auth-native-compact-image`; the uninstall script also clears the manifest entries as a fallback.)
 
 ### Install Manually
 
@@ -69,10 +69,10 @@ node scripts/uninstall.mjs headless   # uninstall from another profile
 #   · or use it ad hoc: replace `dsh` with `npx @deepseek-ai/dsh` below
 
 # With dsh installed globally:
-dsh plugin --profile web add file:/path/to/dsh-llm-codex-native-compact
+dsh plugin --profile web add file:/path/to/dsh-llm-codex-auth-native-compact-image
 
 # Ad hoc, via npx:
-npx @deepseek-ai/dsh plugin --profile web add file:/path/to/dsh-llm-codex-native-compact
+npx @deepseek-ai/dsh plugin --profile web add file:/path/to/dsh-llm-codex-auth-native-compact-image
 
 # restart dsh web so the new bundle takes effect
 ```
@@ -88,7 +88,7 @@ npx @deepseek-ai/dsh plugin --profile web add file:/path/to/dsh-llm-codex-native
 
 ### Verification
 
-After installing, `dsh --profile web --dump-config` (or `npx @deepseek-ai/dsh --profile web --dump-config`) should show the `llm-codex-native-compact` row.
+After installing, `dsh --profile web --dump-config` (or `npx @deepseek-ai/dsh --profile web --dump-config`) should show the `llm-codex-auth-native-compact-image` row.
 
 > **Updating plugin code**: a `file:` install is a hard-link snapshot, so an editor's replace-style write is invisible to pnpm and a plain re-`add` may not refresh it. Prefer stopping dsh and running the repository installer; it refreshes the package location that is actually active and does not require repeated version bumps during local iteration:
 > ```sh
@@ -96,8 +96,8 @@ After installing, `dsh --profile web --dump-config` (or `npx @deepseek-ai/dsh --
 > ```
 > If you use pnpm exclusively, perform a complete remove/add instead:
 > ```sh
-> dsh plugin --profile web remove dsh-llm-codex-native-compact
-> dsh plugin --profile web add file:/path/to/dsh-llm-codex-native-compact
+> dsh plugin --profile web remove dsh-llm-codex-auth-native-compact-image
+> dsh plugin --profile web add file:/path/to/dsh-llm-codex-auth-native-compact-image
 > # without a global dsh install, replace `dsh` with `npx @deepseek-ai/dsh` above
 > ```
 

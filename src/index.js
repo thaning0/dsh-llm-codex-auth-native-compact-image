@@ -5,7 +5,7 @@
  * The same npm package exports `./compaction` for an isolated agent preset;
  * keeping the entry points separate preserves the Host/agent Cordis planes.
  *
- * @module dsh-llm-codex-native-compact
+ * @module dsh-llm-codex-auth-native-compact-image
  */
 import { createModels } from '@earendil-works/pi-ai'
 import { builtinProviders } from '@earendil-works/pi-ai/providers/all'
@@ -20,7 +20,7 @@ import {
   installNativeCompactProbe,
 } from './native-compact.js'
 
-export const name = 'dsh-llm-codex-native-compact'
+export const name = 'dsh-llm-codex-auth-native-compact-image'
 export const inject = ['llm', 'credentials', 'commands']
 
 const DEFAULTS = {
@@ -37,7 +37,7 @@ export function apply(ctx, config) {
   const streamIdleTimeoutMs = config?.streamIdleTimeoutMs ?? DEFAULTS.streamIdleTimeoutMs
   const catalogProvider = builtinProviders().find((entry) => entry.id === providerId)
   if (catalogProvider === undefined) {
-    throw new Error(`dsh-llm-codex-native-compact: the installed pi-ai ships no provider "${providerId}"`)
+    throw new Error(`dsh-llm-codex-auth-native-compact-image: the installed pi-ai ships no provider "${providerId}"`)
   }
 
   const store = new DshCredentialStore(ctx, credentialRef, providerId)
@@ -60,5 +60,5 @@ export function apply(ctx, config) {
   installCommands(ctx, login, store, providerId)
   installNativeCheckpointGuard(ctx, provider)
   installNativeCompactProbe(ctx, transport, { ...config, nativeCompactMode: 'probe' })
-  ctx.logger.info(`dsh-llm-codex-native-compact: provider "${provider}" ready (pi-ai ${providerId}; credential ${credentialRef})`)
+  ctx.logger.info(`dsh-llm-codex-auth-native-compact-image: provider "${provider}" ready (pi-ai ${providerId}; credential ${credentialRef})`)
 }

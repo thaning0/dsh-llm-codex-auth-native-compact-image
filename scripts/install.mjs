@@ -23,7 +23,7 @@ import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const PLUGIN = 'dsh-llm-codex-native-compact'
+const PLUGIN = 'dsh-llm-codex-auth-native-compact-image'
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const DSH_HOME = resolve(process.env.DSH_HOME || join(homedir(), '.dsh'))
 const PROFILE = process.argv[2] || 'web'

@@ -57,7 +57,7 @@ never enter logs or diagnostics.
 ## Package architecture
 
 ```text
-one npm package: dsh-llm-codex-native-compact
+one npm package: dsh-llm-codex-auth-native-compact-image
 ├─ Host entry: provider, OAuth, transport, adapter, replay guard, probe
 └─ Agent entry: isolated ctx.compaction, /compact, pressure/overflow listeners
 

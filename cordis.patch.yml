@@ -2,8 +2,8 @@
 # mounted by the companion user preset so it can replace preset-local
 # compaction-basic without crossing Cordis service realms.
 - insert:
-    - id: llm-codex-native-compact
-      name: 'dsh-llm-codex-native-compact'
+    - id: llm-codex-auth-native-compact-image
+      name: 'dsh-llm-codex-auth-native-compact-image'
       config:
         # dsh provider route shown in the Models page and used in requests.
         provider: codex-oauth

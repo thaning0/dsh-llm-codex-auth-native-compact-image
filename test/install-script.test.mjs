@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const installer = path.join(repo, 'scripts', 'install.mjs')
-const plugin = 'dsh-llm-codex-native-compact'
+const plugin = 'dsh-llm-codex-auth-native-compact-image'
 
 async function makeProfile(home, pkg = {}) {
   const profile = path.join(home, 'profiles', 'web')

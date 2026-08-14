@@ -11,7 +11,7 @@
  * This is the third-party client↔host channel (no typert remotes, no
  * whitelist). Responses are JSON only; no token ever leaves the host.
  *
- * @module dsh-llm-codex-native-compact/server
+ * @module dsh-llm-codex-auth-native-compact-image/server
  */
 
 function sendJson(res, status, payload) {

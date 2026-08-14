@@ -5,7 +5,7 @@ import {
 } from './native-compact.js'
 import { NativeCompactionEngine } from './engine.js'
 
-export const name = 'dsh-llm-codex-native-compact/compaction'
+export const name = 'dsh-llm-codex-auth-native-compact-image/compaction'
 export const inject = ['llm', 'commands', 'tokenMeter', 'sessions', 'codexOAuthTransport']
 
 export function apply(ctx, config) {
@@ -27,5 +27,5 @@ export function apply(ctx, config) {
     maxOverflowRetries: config?.maxOverflowRetries,
   })
   installManualCompactCommand(ctx)
-  ctx.logger.info(`dsh-llm-codex-native-compact: agent-scoped native compaction ready in ${nativeCompact.mode} mode for provider "${provider}"`)
+  ctx.logger.info(`dsh-llm-codex-auth-native-compact-image: agent-scoped native compaction ready in ${nativeCompact.mode} mode for provider "${provider}"`)
 }

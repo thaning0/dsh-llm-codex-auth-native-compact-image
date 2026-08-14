@@ -6,7 +6,7 @@
  */
 import { createModels } from '@earendil-works/pi-ai'
 import { builtinProviders } from '@earendil-works/pi-ai/providers/all'
-import { DshCredentialStore } from 'dsh-llm-codex-native-compact/src/store.js'
+import { DshCredentialStore } from 'dsh-llm-codex-auth-native-compact-image/src/store.js'
 
 const ctx = {
   credentials: {

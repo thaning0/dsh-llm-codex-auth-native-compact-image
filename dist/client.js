@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-	id: "dsh-llm-codex-native-compact",
+	id: "dsh-llm-codex-auth-native-compact-image",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;
@@ -72,7 +72,7 @@ function CodexSection() {
     connected && data?.expiresAt ? (0, import_react.createElement)("p", null, "access token \u5230\u671F\uFF1A", new Date(data.expiresAt).toLocaleString()) : null
   );
 }
-var name = "dsh-llm-codex-native-compact";
+var name = "dsh-llm-codex-auth-native-compact-image";
 var inject = ["slots"];
 function apply(ctx) {
   ctx.slots.inject("settings.section", () => ctx.slots.register({
