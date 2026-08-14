@@ -1,19 +1,25 @@
 {
-  "name": "dsh-llm-codex-oauth",
-  "version": "0.3.6",
-  "description": "Use your ChatGPT/Codex subscription in dsh through the OpenAI Codex OAuth flow.",
+  "name": "dsh-llm-codex-native-compact",
+  "version": "0.6.0-native-auto-compact-dev",
+  "description": "Codex OAuth model provider and provider-native compaction for DeepSeek Harness.",
   "type": "module",
   "main": "src/index.js",
   "exports": {
     "./package.json": "./package.json",
     ".": "./src/index.js",
     "./client": "./dist/client.js",
+    "./transport": "./src/transport.js",
+    "./native-compact": "./src/native-compact.js",
+    "./checkpoint": "./src/checkpoint.js",
+    "./engine": "./src/engine.js",
+    "./compaction": "./src/compaction-plugin.js",
     "./src/*": "./src/*"
   },
   "files": [
     "src",
     "cordis.patch.yml",
-    "dist"
+    "dist",
+    "docs"
   ],
   "dsh": {
     "bundle": {
@@ -28,10 +34,12 @@
     }
   },
   "scripts": {
-    "test": "node --test test/install-script.test.mjs"
+    "test": "node --test test/install-script.test.mjs test/transport.test.mjs test/native-compact.test.mjs test/checkpoint.test.mjs test/adapter-native-replay.test.mjs test/adapter-image.test.mjs test/engine.test.mjs test/compaction-plugin.test.mjs test/security.test.mjs",
+    "check": "node --check src/index.js && node --check src/adapter.js && node --check src/compaction-plugin.js && node --check src/transport.js && node --check src/native-compact.js && node --check src/checkpoint.js && node --check src/engine.js && npm test"
   },
   "license": "MIT",
   "dependencies": {
+    "@deepseek-ai/dsh-compaction": "0.1.0-rc.6",
     "@deepseek-ai/dsh-credentials": "^0.1.0-rc.6",
     "@deepseek-ai/dsh-llm": "^0.1.0-rc.6",
     "@earendil-works/pi-ai": "^0.82.1"
@@ -40,6 +48,7 @@
     "@deepseek-ai/cordis": "^4.0.1"
   },
   "devDependencies": {
+    "@deepseek-ai/dsh-session": "0.1.0-rc.6",
     "esbuild": "^0.28.2",
     "react": "18.3.1"
   }

@@ -1,11 +1,9 @@
-# dsh-llm-codex-oauth bundle layer — one host-plane row inserted into the
-# profile root.
-#
-# The row mounts the plugin on the HOST plane (model routes, credentials, and
-# the command registry all live there). Nothing here touches agent presets.
+# One package, host provider role. The agent-scoped native compaction role is
+# mounted by the companion user preset so it can replace preset-local
+# compaction-basic without crossing Cordis service realms.
 - insert:
-    - id: llm-codex-oauth
-      name: 'dsh-llm-codex-oauth'
+    - id: llm-codex-native-compact
+      name: 'dsh-llm-codex-native-compact'
       config:
         # dsh provider route shown in the Models page and used in requests.
         provider: codex-oauth

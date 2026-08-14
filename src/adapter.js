@@ -14,7 +14,7 @@
  * reconstruct provider-native assistant messages (signatures) for the
  * ChatGPT backend.
  *
- * @module dsh-llm-codex-oauth/adapter
+ * @module dsh-llm-codex-native-compact/adapter
  */
 import {
   CallId,
@@ -30,6 +30,13 @@ import {
   isQuotaExceededError,
 } from '@deepseek-ai/dsh-llm'
 import { getSupportedThinkingLevels, isContextOverflow } from '@earendil-works/pi-ai'
+import {
+  NATIVE_COMPACT_REPLAY_CODE,
+  assertNativeCompactCompatibility,
+  checkpointHasAttachmentImages,
+  inflateNativeCheckpointImages,
+  readNativeCompactCheckpoint,
+} from './checkpoint.js'
 
 export const PROVIDER_NAME = 'OpenAI Codex (ChatGPT 订阅)'
 const DEFAULT_STREAM_IDLE_TIMEOUT_MS = 300000
@@ -55,6 +62,55 @@ function toolResultText(blocks) {
   return blocks
     .map((block) => (block.type === 'text' ? block.text : block.type === 'tool-result' ? toolResultText(block.content) : ''))
     .join('')
+}
+
+async function userContent(blocks, attachments, signal, imageReads, imageReferences) {
+  const content = []
+  for (const block of blocks) {
+    switch (block.type) {
+      case 'text':
+        if (block.text.length > 0) content.push({ type: 'text', text: block.text })
+        break
+      case 'image': {
+        const key = JSON.stringify([
+          String(block.attachment.attachmentId),
+          block.attachment.mediaType,
+          block.attachment.bytes,
+          block.attachment.width,
+          block.attachment.height,
+          block.attachment.name ?? null,
+        ])
+        let pending = imageReads.get(key)
+        if (pending === undefined) {
+          pending = attachments.readImage(block.attachment, signal)
+          imageReads.set(key, pending)
+        }
+        const stored = await pending
+        const data = Buffer.from(stored.data).toString('base64')
+        imageReferences.set(`data:${stored.ref.mediaType};base64,${data}`, stored.ref)
+        content.push({
+          type: 'image',
+          data,
+          mimeType: stored.ref.mediaType,
+        })
+        break
+      }
+      case 'tool-result': {
+        const nested = await userContent(block.content, attachments, signal, imageReads, imageReferences)
+        if (typeof nested === 'string') {
+          if (nested.length > 0) content.push({ type: 'text', text: nested })
+        } else {
+          content.push(...nested)
+        }
+        break
+      }
+      default:
+        break
+    }
+  }
+  return content.every((block) => block.type === 'text')
+    ? content.map((block) => block.text).join('')
+    : content
 }
 
 function toolsOf(options) {
@@ -228,11 +284,54 @@ function toPiAssistant(message, providerId) {
     : replayedAssistant(message, source, source.replayState, providerId)
 }
 
-/** Text-only harness history conversion (image input is refused for now). */
-function textOnlyContext(options, providerId) {
+function nativeCheckpointError(error) {
+  if (error instanceof LlmError) return error
+  const message = error instanceof Error ? error.message : String(error)
+  return new LlmError(message, NATIVE_COMPACT_REPLAY_CODE, { cause: error })
+}
+
+function checkpointAsPiMessages(checkpoint, providerId) {
+  return checkpoint.items.map((item, index) => ({
+    role: 'assistant',
+    content: [{
+      type: 'thinking',
+      thinking: '',
+      // pi-ai's Responses converter emits signed reasoning payloads verbatim.
+      // A native compaction item is deliberately carried through the same
+      // opaque JSON seam so no generic text/message conversion can alter it.
+      thinkingSignature: JSON.stringify(item),
+    }],
+    api: 'openai-codex-responses',
+    provider: providerId,
+    model: checkpoint.model,
+    usage: { input: 0, output: 0 },
+    stopReason: 'stop',
+    timestamp: index,
+  }))
+}
+
+/** Synchronous fast path for histories that contain no durable image blocks. */
+export function textOnlyContext(options, providerId, checkpointCompatibility) {
   const toolNames = new Map()
   const messages = []
   for (const message of options.messages) {
+    let checkpoint
+    try {
+      checkpoint = readNativeCompactCheckpoint(message.source)
+      if (checkpoint !== undefined) {
+        if (checkpointCompatibility === undefined) throw new Error('active adapter supplied no checkpoint compatibility context')
+        assertNativeCompactCompatibility(checkpoint, checkpointCompatibility)
+      }
+    } catch (error) {
+      throw nativeCheckpointError(error)
+    }
+    if (checkpoint !== undefined) {
+      if (checkpointHasAttachmentImages(checkpoint)) {
+        throw new LlmError('native checkpoint images require the asynchronous attachment path', 'UNSUPPORTED_CONTENT')
+      }
+      messages.push(...checkpointAsPiMessages(checkpoint, providerId))
+      continue
+    }
     if (contentHasImage(message.content)) throw new LlmError('codex-oauth image input is not supported yet', 'UNSUPPORTED_CONTENT')
     if (message.role === 'system') {
       messages.push({ role: 'user', content: flattenText(message), timestamp: 0 })
@@ -259,6 +358,88 @@ function textOnlyContext(options, providerId) {
     }
   }
   return piContext(options, messages)
+}
+
+async function contextWithImages(options, providerId, checkpointCompatibility, attachments, imageReferences) {
+  const toolNames = new Map()
+  const messages = []
+  const imageReads = new Map()
+  for (const message of options.messages) {
+    let checkpoint
+    try {
+      checkpoint = readNativeCompactCheckpoint(message.source)
+      if (checkpoint !== undefined) {
+        if (checkpointCompatibility === undefined) throw new Error('active adapter supplied no checkpoint compatibility context')
+        assertNativeCompactCompatibility(checkpoint, checkpointCompatibility)
+      }
+    } catch (error) {
+      throw nativeCheckpointError(error)
+    }
+    if (checkpoint !== undefined) {
+      const items = checkpointHasAttachmentImages(checkpoint)
+        ? await inflateNativeCheckpointImages(checkpoint, attachments, options.signal, imageReferences)
+        : checkpoint.items
+      messages.push(...checkpointAsPiMessages({ ...checkpoint, items }, providerId))
+      continue
+    }
+    if (message.role === 'system') {
+      if (contentHasImage(message.content)) {
+        throw new LlmError('codex-oauth cannot represent an image in an in-history system message', 'UNSUPPORTED_CONTENT')
+      }
+      messages.push({ role: 'user', content: flattenText(message), timestamp: 0 })
+      continue
+    }
+    if (message.role === 'assistant') {
+      const assistant = toPiAssistant(message, providerId)
+      for (const block of assistant.content) if (block.type === 'toolCall') toolNames.set(CallId(block.id), block.name)
+      messages.push(assistant)
+      continue
+    }
+    const content = await userContent(
+      message.content.filter((block) => block.type !== 'tool-result'),
+      attachments,
+      options.signal,
+      imageReads,
+      imageReferences,
+    )
+    const results = message.content.filter((block) => block.type === 'tool-result')
+    if (content.length > 0 || results.length === 0) messages.push({ role: 'user', content, timestamp: 0 })
+    for (const result of results) {
+      const resultContent = await userContent(result.content, attachments, options.signal, imageReads, imageReferences)
+      messages.push({
+        role: 'toolResult',
+        toolCallId: result.toolCallId,
+        toolName: toolNames.get(result.toolCallId) ?? 'unknown',
+        content: typeof resultContent === 'string'
+          ? [{ type: 'text', text: resultContent || '(no output)' }]
+          : resultContent,
+        isError: result.isError ?? false,
+        timestamp: 0,
+      })
+    }
+  }
+  return piContext(options, messages)
+}
+
+/** Convert durable DSH images only when the selected model and attachment store allow it. */
+export async function codexContext(options, providerId, checkpointCompatibility, {
+  attachments,
+  imageInputSupported = true,
+  imageReferences = new Map(),
+} = {}) {
+  const containsImage = options.messages.some((message) => {
+    if (contentHasImage(message.content)) return true
+    const checkpoint = readNativeCompactCheckpoint(message.source)
+    return checkpoint !== undefined && checkpointHasAttachmentImages(checkpoint)
+  })
+  if (!containsImage) return textOnlyContext(options, providerId, checkpointCompatibility)
+  if (!imageInputSupported) {
+    throw new LlmError(`codex-oauth model "${options.model ?? 'unknown'}" does not support image input`, 'UNSUPPORTED_CONTENT')
+  }
+  if (attachments === undefined) {
+    throw new LlmError('codex-oauth image input requires the durable attachment service', 'UNSUPPORTED_CONTENT')
+  }
+  return contextWithImages(options, providerId, checkpointCompatibility, attachments, imageReferences)
 }
 
 // ── stream translation ──────────────────────────────────────────────────────
@@ -462,6 +643,8 @@ export class CodexAdapter extends LlmAdapter {
   #models
   #providerId
   #provider
+  #transport
+  #resolveAttachments
   #streamIdleTimeoutMs
 
   /**
@@ -469,12 +652,20 @@ export class CodexAdapter extends LlmAdapter {
    * @param providerId - pi-ai catalog provider id (openai-codex).
    * @param provider - dsh provider route (codex-oauth), recorded in replay state.
    * @param options.streamIdleTimeoutMs - per-chunk idle timeout.
+   * @param options.transport - authenticated native-compaction transport.
+   * @param options.resolveAttachments - reads the optional durable image store at request time.
    */
-  constructor(models, providerId, provider, { streamIdleTimeoutMs = DEFAULT_STREAM_IDLE_TIMEOUT_MS } = {}) {
+  constructor(models, providerId, provider, {
+    streamIdleTimeoutMs = DEFAULT_STREAM_IDLE_TIMEOUT_MS,
+    transport,
+    resolveAttachments,
+  } = {}) {
     super()
     this.#models = models
     this.#providerId = providerId
     this.#provider = provider
+    this.#transport = transport
+    this.#resolveAttachments = resolveAttachments
     this.#streamIdleTimeoutMs = streamIdleTimeoutMs
   }
 
@@ -513,11 +704,37 @@ export class CodexAdapter extends LlmAdapter {
     const model = this.#models.getModel(this.#providerId, options.model)
     if (model === undefined) throw new LlmError(`codex-oauth provider "${this.#providerId}" has no configured model "${options.model}"`, 'UNKNOWN_MODEL')
     const reasoning = resolveReasoningLevel(model, options.reasoningEffort)
+    let checkpointCompatibility
+    try {
+      const checkpoints = options.messages
+        .map((message) => readNativeCompactCheckpoint(message.source))
+        .filter((checkpoint) => checkpoint !== undefined)
+      if (checkpoints.length > 0) {
+        if (this.#transport === undefined) throw new Error('native compact transport is unavailable')
+        for (const checkpoint of checkpoints) {
+          assertNativeCompactCompatibility(checkpoint, {
+            provider: this.#provider,
+            model: options.model,
+            transportIdentity: checkpoint.transportIdentity,
+          })
+        }
+        checkpointCompatibility = {
+          provider: this.#provider,
+          model: options.model,
+          transportIdentity: await this.#transport.identity(options.model),
+        }
+      }
+    } catch (error) {
+      throw nativeCheckpointError(error)
+    }
     const consumer = new AbortController()
     const upstream = options.signal === undefined ? consumer.signal : AbortSignal.any([options.signal, consumer.signal])
     const watchdog = idleWatchdog(upstream, this.#streamIdleTimeoutMs)
     try {
-      const context = textOnlyContext(options, this.#providerId)
+      const context = await codexContext(options, this.#providerId, checkpointCompatibility, {
+        attachments: this.#resolveAttachments?.(),
+        imageInputSupported: model.input.includes('image'),
+      })
       const iterator = toStreamChunks(
         this.#models.streamSimple(model, context, {
           ...(reasoning === undefined ? {} : { reasoning }),

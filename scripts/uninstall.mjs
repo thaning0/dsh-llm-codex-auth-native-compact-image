@@ -9,14 +9,14 @@
  *
  * This is the counterpart of scripts/install.mjs. If the plugin was installed
  * through `dsh plugin add` (pnpm), prefer the official removal:
- *   dsh plugin --profile <name> remove dsh-llm-codex-oauth
+ *   dsh plugin --profile <name> remove dsh-llm-codex-native-compact
  * (this script still clears the manifest entries as a fallback).
  */
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
-const PLUGIN = 'dsh-llm-codex-oauth'
+const PLUGIN = 'dsh-llm-codex-native-compact'
 const DSH_HOME = process.env.DSH_HOME || join(homedir(), '.dsh')
 const PROFILE = process.argv[2] || 'web'
 const profileDir = join(DSH_HOME, 'profiles', PROFILE)

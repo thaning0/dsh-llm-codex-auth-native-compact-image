@@ -10,7 +10,7 @@
  * commands. State is memory-only by design: after a restart the durable truth
  * is the stored credential itself.
  *
- * @module dsh-llm-codex-oauth/login
+ * @module dsh-llm-codex-native-compact/login
  */
 
 const DEVICE_CODE_METHOD = 'device_code'

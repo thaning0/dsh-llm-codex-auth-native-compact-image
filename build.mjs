@@ -1,7 +1,7 @@
 import { build } from 'esbuild'
 import { readFileSync, rmSync, writeFileSync } from 'node:fs'
 
-const id = 'dsh-llm-codex-oauth'
+const id = 'dsh-llm-codex-native-compact'
 
 // 1. Bundle the client half to CommonJS. `react` and `@deepseek-ai/*` stay
 //    external: the factory's module-system `require` resolves them from the

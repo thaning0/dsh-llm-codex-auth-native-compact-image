@@ -1,11 +1,11 @@
 /**
- * Stream-translation tests for the installed dsh-llm-codex-oauth adapter:
+ * Stream-translation tests for the installed dsh-llm-codex-native-compact adapter:
  * pi-ai event stream → dsh StreamChunks, replay metadata round-trip, error
  * classification, option assembly, and guard rails. No network, no dsh boot.
  */
 import { LlmError } from '@deepseek-ai/dsh-llm'
 import { builtinProviders } from '@earendil-works/pi-ai/providers/all'
-import { CodexAdapter } from 'dsh-llm-codex-oauth/src/adapter.js'
+import { CodexAdapter } from 'dsh-llm-codex-native-compact/src/adapter.js'
 
 let failed = 0
 function check(label, ok, detail = '') {
@@ -186,7 +186,7 @@ async function* tinyEvents() {
   check('T5 replayed text keeps signature', replayed?.content?.[0]?.type === 'text' && replayed?.content?.[0]?.text === 'earlier answer' && replayed?.content?.[0]?.textSignature === 'sig-prev')
 }
 
-// ── T6: image input refused ─────────────────────────────────────────────────
+// ── T6: image input refused by a text-only catalog model ────────────────────
 {
   const { adapter } = makeAdapter(tinyEvents)
   let refused = false
@@ -198,7 +198,7 @@ async function* tinyEvents() {
   } catch (error) {
     refused = error instanceof LlmError && error.failure?.code === 'UNSUPPORTED_CONTENT'
   }
-  check('T6 image input refused with UNSUPPORTED_CONTENT', refused)
+  check('T6 text-only model refuses image input with UNSUPPORTED_CONTENT', refused)
 }
 
 // ── T7: unsupported reasoning effort ────────────────────────────────────────

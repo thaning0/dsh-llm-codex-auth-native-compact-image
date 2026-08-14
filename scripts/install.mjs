@@ -23,11 +23,11 @@ import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const PLUGIN = 'dsh-llm-codex-oauth'
+const PLUGIN = 'dsh-llm-codex-native-compact'
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const DSH_HOME = resolve(process.env.DSH_HOME || join(homedir(), '.dsh'))
 const PROFILE = process.argv[2] || 'web'
-const CONTENT = ['src', 'dist', 'cordis.patch.yml', 'package.json']
+const CONTENT = ['src', 'dist', 'docs', 'cordis.patch.yml', 'package.json']
 
 if (!/^[A-Za-z0-9._-]+$/.test(PROFILE)) {
   console.error('error: profile may contain only letters, numbers, dot, underscore, and hyphen')

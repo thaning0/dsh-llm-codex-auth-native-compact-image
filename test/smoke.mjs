@@ -1,12 +1,13 @@
 /**
- * Unit smoke test for dsh-llm-codex-oauth, run without booting dsh.
+ * Unit smoke test for dsh-llm-codex-native-compact, run without booting dsh.
  * Resolves dependencies through the profile's node_modules.
  *
  * Surface covered: provider route, the /codex-oauth HTTP routes (status /
- * login / logout) against a stubbed webServer, the two read-only commands,
- * and the credential-store round-trip. No network is required.
+ * login / logout) against a stubbed webServer, auth helper commands, the
+ * explicit inert native-compact probe registration, and credential-store round-trip.
+ * No network is required.
  */
-import * as plugin from 'dsh-llm-codex-oauth'
+import * as plugin from 'dsh-llm-codex-native-compact'
 
 let failed = 0
 function check(label, ok, detail = '') {
@@ -31,10 +32,21 @@ const webServer = {
 
 const ctx = {
   logger: { info() {}, warn() {}, error() {} },
+  on() { return () => {} },
   effect(fn) {
-    const dispose = fn()
-    if (typeof dispose === 'function') disposers.push(dispose)
+    const value = fn()
+    if (value && typeof value.next === 'function') {
+      for (let step = value.next(); !step.done; step = value.next()) {
+        if (typeof step.value === 'function') disposers.push(step.value)
+      }
+    } else if (typeof value === 'function') {
+      disposers.push(value)
+    }
     return () => {}
+  },
+  provide(name, service) {
+    this[name] = service
+    return () => { delete this[name] }
   },
   get(key) {
     return key === 'webServer' ? webServer : undefined
@@ -83,7 +95,7 @@ async function route(path) {
 
 // ── apply ────────────────────────────────────────────────────────────────────
 console.log('plugin exports:', Object.keys(plugin).join(', '))
-plugin.apply(ctx, { provider: 'codex-oauth', providerId: 'openai-codex', credentialRef: 'OPENAI_CODEX_OAUTH' })
+plugin.apply(ctx, { provider: 'codex-oauth', providerId: 'openai-codex', credentialRef: 'OPENAI_CODEX_OAUTH', nativeCompactMode: 'probe' })
 
 // ── provider route ──────────────────────────────────────────────────────────
 check('registered one provider route', registered.providers.length === 1 && registered.providers[0] === 'codex-oauth')
@@ -115,16 +127,17 @@ check('status 未登录 after logout', afterLogout.body.connected === false)
 const notFound = await route('/codex-oauth/nope')
 check('unknown subpath 404', notFound.status === 404)
 
-// ── commands: read-only helpers only ────────────────────────────────────────
+// ── commands in dependency-light probe smoke ────────────────────────────────
 const names = registered.commands.map((c) => c.name).sort()
-check('commands are status+logout only', JSON.stringify(names) === JSON.stringify(['codex-logout', 'codex-status']), names.join(', '))
+check('commands include auth helpers and explicit probe', JSON.stringify(names) === JSON.stringify(['codex-logout', 'codex-status', 'native-compact-probe']), names.join(', '))
 check('no conversation-side login command', !registered.commands.some((c) => c.name === 'codex-login'))
+check('native compact probe is explicit and does not run during apply', registered.commands.some((c) => c.name === 'native-compact-probe'))
 const statusDef = registered.commands.find((c) => c.name === 'codex-status')
 const result = await statusDef.handler({})
 check('codex-status points to settings page when 未登录', result.kind === 'success' && /设置页/.test(result.text ?? ''), result.text)
 
 // ── credential store round-trip ─────────────────────────────────────────────
-const { DshCredentialStore } = await import('dsh-llm-codex-oauth/src/store.js')
+const { DshCredentialStore } = await import('dsh-llm-codex-native-compact/src/store.js')
 const store = new DshCredentialStore(ctx, 'OPENAI_CODEX_OAUTH', 'openai-codex')
 const before = await store.read('openai-codex')
 const after = await store.modify('openai-codex', async () => ({ type: 'oauth', access: 'acc', refresh: 'ref', expires: 1, accountId: 'x' }))
