@@ -32,6 +32,7 @@
 - **凭据安全**：refresh / access token 只存在 dsh 凭据库 `$DSH_HOME/.credentials.yaml`（0600），**不进配置、不进会话日志、不进本仓库**；access token 过期时由 pi-ai 在串行化的写路径里自动用 refresh token 续期。
 - **登录与订阅用量**：设置页「Codex 订阅 (ChatGPT)」区块提供登录 / 登出、5 小时与 7 天窗口的剩余用量百分比、重置时间及手动刷新；对话侧可用 `/codex-status`、`/codex-usage`、`/codex-logout`。
 - **多轮对话**：完整保留 provider 原生回放元数据（签名等），支持跨轮次多轮请求。
+- **瞬时错误恢复**：将 Codex 官方“处理请求时发生错误”及无状态码 internal-server-error 文案精确归类为可重试的 `SERVER`；交由 DSH 默认重试策略退避重试，并在 durable retry 事件中保留 provider request ID。其他未知 `CODEX_ERROR` 不会盲目重试。
 - **多模态图片输入**：对声明 image capability 的 Codex 模型，将用户附件、`read_image` 延迟上下文及工具结果中的 PNG/JPEG/WebP/GIF durable attachment 转成请求期 Responses `input_image` base64 data URL；普通回放、手动/自动 native compact 与 checkpoint replay 使用同一路径，checkpoint 只落 attachment ref、不落图片 base64。
 - **共享原生压缩 transport**：发布不暴露 token 的 `codexOAuthTransport` Cordis 服务；OAuth 刷新、ChatGPT 账号 Header、端点隔离、V2 `compaction_trigger` 与 opaque item 回放全部留在认证插件内部，调用方不会收到凭据材料。
 - **手动与自动原生压缩**：`/compact`、80% 压力触发和 context-overflow 恢复都将旧历史替换为版本化 opaque checkpoint；落盘/重启后由 Codex adapter 在通用消息转换前原样回放。跨 provider、model 或账号 identity 会在联网前失败，绝不回退到文本摘要。

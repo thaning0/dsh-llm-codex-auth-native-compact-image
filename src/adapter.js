@@ -454,13 +454,18 @@ function mapUsage(usage) {
   }
 }
 
+/** Extract the provider correlation id carried by canonical Codex failures. */
+function requestIdFromError(message) {
+  return /\brequest ID\s+([A-Za-z0-9_-]+)\b/i.exec(message)?.[1]
+}
+
 /** Classify a pi-ai error message into the harness error taxonomy. */
 function classifyError(message) {
   if (/\b(?:401|403)\b/.test(message)) return 'AUTH'
   if (isQuotaExceededError(message)) return QUOTA_EXCEEDED_CODE
   if (/\b429\b|rate.?limit/i.test(message)) return 'RATE_LIMIT'
   if (/\b400\b|invalid.?request/i.test(message)) return 'INVALID_REQUEST'
-  if (/\b5\d\d\b/.test(message)) return 'SERVER'
+  if (/\b5\d\d\b/.test(message) || /\binternal server error\b/i.test(message) || /\ban error occurred while processing your request\b/i.test(message)) return 'SERVER'
   if (/\btime(?:d)?\s*out\b|timeout/i.test(message)) return 'TIMEOUT'
   if (/stream ended (?:before|without)\b/i.test(message)) return 'TRANSPORT'
   if (/\b(?:network|connection|socket|fetch)\b|\bECONN[A-Z]+\b/i.test(message) || /\b(?:other side closed|HTTP2 request did not get a response|WebSocket closed unexpectedly)\b/i.test(message) || /\bterminated\b|premature close/i.test(message)) return 'TRANSPORT'
@@ -497,7 +502,15 @@ function mapStopReason(message, contextWindow) {
       return { kind: 'aborted', failure: { message: message.errorMessage ?? 'codex-oauth stream aborted', code: 'ABORTED' } }
     case 'error': {
       const text = message.errorMessage ?? 'codex-oauth stream error'
-      return { kind: 'error', failure: { message: text, code: classifyError(text) } }
+      const requestId = requestIdFromError(text)
+      return {
+        kind: 'error',
+        failure: {
+          message: text,
+          code: classifyError(text),
+          ...(requestId === undefined ? {} : { requestId }),
+        },
+      }
     }
     default:
       return { kind: 'stop' }

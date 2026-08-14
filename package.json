@@ -34,7 +34,7 @@
     }
   },
   "scripts": {
-    "test": "node --test test/install-script.test.mjs test/transport.test.mjs test/usage.test.mjs test/native-compact.test.mjs test/checkpoint.test.mjs test/adapter-native-replay.test.mjs test/adapter-image.test.mjs test/engine.test.mjs test/compaction-plugin.test.mjs test/security.test.mjs",
+    "test": "node --test test/install-script.test.mjs test/transport.test.mjs test/usage.test.mjs test/native-compact.test.mjs test/checkpoint.test.mjs test/adapter-native-replay.test.mjs test/adapter-image.test.mjs test/adapter-retry.test.mjs test/engine.test.mjs test/compaction-plugin.test.mjs test/security.test.mjs",
     "check": "node --check src/index.js && node --check src/client.js && node --check src/server.js && node --check src/commands.js && node --check src/usage.js && node --check src/adapter.js && node --check src/compaction-plugin.js && node --check src/transport.js && node --check src/native-compact.js && node --check src/checkpoint.js && node --check src/engine.js && npm test"
   },
   "license": "MIT",
