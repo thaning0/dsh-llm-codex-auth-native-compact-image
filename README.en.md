@@ -30,7 +30,7 @@ This plugin also integrates provider-native compaction. One npm package exposes 
 - **Subscription models**: registers pi-ai's built-in `openai-codex` provider (`openai-codex-responses` wire protocol) as the `codex-oauth` provider on the dsh LLM seam. The model catalog is maintained by the installed pi-ai (e.g. `gpt-5.3-codex-spark`, `gpt-5.4`, `gpt-5.5`, `gpt-5.6-*`, …).
 - **OAuth device-code login**: uses `auth.openai.com` (the same OAuth client as the Codex CLI), headless-friendly, no local callback server required.
 - **Credential safety**: refresh / access tokens live only in the dsh credential store `$DSH_HOME/.credentials.yaml` (0600) — never in config, never in session logs, never in this repository. Expired access tokens are refreshed automatically by pi-ai inside a serialized write path.
-- **Settings-page login**: provides a "Codex 订阅 (ChatGPT)" section with login / logout buttons and live status; the conversation side keeps only the read-only `/codex-status` and `/codex-logout` commands.
+- **Login and subscription usage**: the "Codex 订阅 (ChatGPT)" settings section provides login / logout, remaining percentages and reset times for the 5-hour and 7-day windows, plus manual refresh. Conversation helpers are `/codex-status`, `/codex-usage`, and `/codex-logout`.
 - **Multimodal image input**: for Codex models declaring image capability, durable PNG/JPEG/WebP/GIF attachments from users, deferred `read_image` context, and tool results become request-local Responses `input_image` base64 data URLs. Ordinary replay, manual/automatic native compaction, and checkpoint replay share the same path; checkpoints persist attachment refs, never image base64.
 - **Multi-turn**: preserves provider-native replay metadata (signatures, …) for reliable multi-turn requests.
 - **Shared native-compaction transport**: publishes the token-free `codexOAuthTransport` Cordis service. It owns OAuth refresh, ChatGPT account headers, endpoint isolation, V2 `compaction_trigger`, and opaque-item replay; consumers never receive token material.
@@ -104,11 +104,11 @@ After installing, `dsh --profile web --dump-config` (or `npx @deepseek-ai/dsh --
 ## Usage
 
 1. After restarting dsh, open the **settings page** and select "Codex 订阅 (ChatGPT)" in the sidebar.
-2. Click "登录 ChatGPT 账号", then follow the prompt: open the verification URL, enter the device code, and sign in to your ChatGPT account.
+2. Click "登录 ChatGPT 账号", follow the device-code prompt, and sign in. The section then shows the remaining percentages for the 5-hour and 7-day windows, refreshes once per minute, and also offers a manual refresh button.
 3. Create the conversation with the `Codex Native` agent preset (it may be configured as the local default), then select a model under `codex-oauth`. Existing conversations created with `standard` do not hot-swap their compaction provider.
 4. Run `/compact` while idle with at least two compactable surface messages. Opaque checkpoints carry roughly a thousand-token fixed cost, so a short conversation can be safely rejected when the checkpoint is not smaller than its history; no replacement is written. Normal turns automatically native-compact at 80% of the routed model context window; a provider-confirmed context overflow also gets one native-compaction recovery attempt.
 5. Expand the GUI compaction row and look for `Provider-native Codex compaction checkpoint`. The collapsed “Compacted N history items” label is shared by every backend and does not prove native by itself.
-6. Logout via the settings section or `/codex-logout`; `/codex-status` shows status at any time.
+6. `/codex-usage` force-refreshes and reports the remaining percentages in a conversation. Logout via the settings section or `/codex-logout`; `/codex-status` shows login status.
 
 ## How it works
 
@@ -122,9 +122,10 @@ After installing, `dsh --profile web --dump-config` (or `npx @deepseek-ai/dsh --
 | `src/native-compact.js` | `/compact` and the pre-network foreign-provider replay guard |
 | `src/store.js` | Bridge between pi-ai's `CredentialStore` and the dsh credential store (serialized read/write, tokens never leave the host) |
 | `src/login.js` | Device-code login orchestration (pi-ai's own flow, persists the credential automatically) |
-| `src/server.js` | Host `webServer` routes under `/codex-oauth` (status / login / logout) for the browser half |
-| `src/client.js` | Browser half: a `settings.section` UI, bundled by `build.mjs` into the client-modules factory format |
-| `src/commands.js` | Read-only commands `/codex-status`, `/codex-logout` |
+| `src/usage.js` | WHAM response allow-listing, remaining-percent calculation, 60-second host cache, and command formatting |
+| `src/server.js` | Host `webServer` routes under `/codex-oauth` (status / usage / login / logout) for the browser half |
+| `src/client.js` | Browser settings login and usage progress bars, bundled by `build.mjs` into the client-modules factory format |
+| `src/commands.js` | Commands `/codex-status`, `/codex-usage`, `/codex-logout` |
 
 ## Development
 

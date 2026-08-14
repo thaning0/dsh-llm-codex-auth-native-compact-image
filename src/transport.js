@@ -4,6 +4,7 @@ import {
   convertResponsesMessages,
   convertResponsesTools,
 } from '@earendil-works/pi-ai/api/openai-responses-shared'
+import { normalizeSubscriptionUsage } from './usage.js'
 
 const PROVIDER = 'codex-oauth'
 const PROVIDER_ID = 'openai-codex'
@@ -307,6 +308,42 @@ export class CodexOAuthTransport {
       throw fail('NATIVE_COMPACT_MODEL', 'Codex model must be a non-empty string')
     }
     return (await this.#authorization(model)).identity
+  }
+
+  /** Fetch sanitized ChatGPT subscription rate-limit windows without exposing OAuth material. */
+  async fetchSubscriptionUsage(options = {}) {
+    const model = options.model ?? this.describe().defaultModel
+    if (typeof model !== 'string' || model.length === 0) {
+      throw fail('CODEX_USAGE_MODEL', 'no Codex model is available for authentication')
+    }
+    if (options.signal !== undefined && !(options.signal instanceof AbortSignal)) {
+      throw fail('CODEX_USAGE_REQUEST', 'Codex usage signal must be an AbortSignal')
+    }
+    const auth = await this.#authorization(model)
+    const timeout = AbortSignal.timeout(Math.min(this.#timeoutMs, 30_000))
+    const signal = options.signal === undefined ? timeout : AbortSignal.any([options.signal, timeout])
+    let response
+    try {
+      response = await this.#fetch(`${auth.baseUrl}/wham/usage`, {
+        method: 'GET',
+        headers: {
+          ...baseHeaders(auth.token, auth.accountId),
+          accept: 'application/json',
+        },
+        signal,
+      })
+    } catch (error) {
+      if (options.signal?.aborted) throw fail('CODEX_USAGE_ABORTED', 'Codex usage request was aborted', error)
+      throw fail('CODEX_USAGE_TRANSPORT', 'Codex usage request failed', error)
+    }
+    if (!response.ok) {
+      throw fail('CODEX_USAGE_HTTP', `Codex usage request failed with HTTP ${response.status}`)
+    }
+    try {
+      return normalizeSubscriptionUsage(await response.json())
+    } catch (error) {
+      throw fail('CODEX_USAGE_PROTOCOL', 'Codex usage response was invalid', error)
+    }
   }
 
   async compactContext(request) {

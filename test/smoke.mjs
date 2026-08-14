@@ -129,7 +129,7 @@ check('unknown subpath 404', notFound.status === 404)
 
 // ── production conversation commands ───────────────────────────────────────
 const names = registered.commands.map((c) => c.name).sort()
-check('commands expose only auth status helpers', JSON.stringify(names) === JSON.stringify(['codex-logout', 'codex-status']), names.join(', '))
+check('commands expose auth status and usage helpers', JSON.stringify(names) === JSON.stringify(['codex-logout', 'codex-status', 'codex-usage']), names.join(', '))
 check('no conversation-side login command', !registered.commands.some((c) => c.name === 'codex-login'))
 const statusDef = registered.commands.find((c) => c.name === 'codex-status')
 const result = await statusDef.handler({})

@@ -2,9 +2,10 @@
  * Host HTTP routes for the settings-panel client half.
  *
  * Uses the dsh web server service (`ctx.webServer`, mounted by the web app
- * bundle) to expose three same-origin endpoints the browser client calls:
+ * bundle) to expose same-origin endpoints the browser client calls:
  *
  *   GET  /codex-oauth/status   → login status + pending device-code fields
+ *   GET  /codex-oauth/usage    → sanitized subscription remaining percentages
  *   POST /codex-oauth/login    → start the device-code flow (returns first state)
  *   POST /codex-oauth/logout   → abort + delete the stored credential
  *
@@ -78,7 +79,7 @@ function statusPayload(state, credential) {
  * absent (e.g. a headless profile), so the plugin keeps working there.
  * @returns the route disposer, or undefined when there is no web server.
  */
-export function installServerRoutes(ctx, login, store, providerId) {
+export function installServerRoutes(ctx, login, store, providerId, usage) {
   const webServer = ctx.get('webServer')
   if (webServer === undefined) return undefined
 
@@ -95,6 +96,15 @@ export function installServerRoutes(ctx, login, store, providerId) {
           return sendJson(res, 200, statusPayload(login.state, credential))
         }
 
+        if (path === '/codex-oauth/usage') {
+          const credential = await store.read(providerId)
+          if (credential === undefined) {
+            return sendJson(res, 401, { ok: false, error: '请先登录 ChatGPT 账号' })
+          }
+          const force = url.searchParams.get('refresh') === '1'
+          return sendJson(res, 200, { ok: true, ...await usage.get({ force }) })
+        }
+
         if (path === '/codex-oauth/login') {
           const credential = await store.read(providerId)
           if (credential !== undefined) {
@@ -107,6 +117,7 @@ export function installServerRoutes(ctx, login, store, providerId) {
 
         if (path === '/codex-oauth/logout') {
           await login.logout()
+          usage.clear()
           return sendJson(res, 200, { ok: true, connected: false, statusText: '未登录' })
         }
 

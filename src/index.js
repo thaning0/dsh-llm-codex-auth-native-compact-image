@@ -15,6 +15,7 @@ import { LoginManager } from './login.js'
 import { installCommands } from './commands.js'
 import { installServerRoutes } from './server.js'
 import { CodexOAuthTransport } from './transport.js'
+import { CodexUsageService } from './usage.js'
 import { installNativeCheckpointGuard } from './native-compact.js'
 
 export const name = 'dsh-llm-codex-auth-native-compact-image'
@@ -53,8 +54,9 @@ export function apply(ctx, config) {
   }))
 
   const login = new LoginManager(ctx, models, providerId)
-  installServerRoutes(ctx, login, store, providerId)
-  installCommands(ctx, login, store, providerId)
+  const usage = new CodexUsageService(transport)
+  installServerRoutes(ctx, login, store, providerId, usage)
+  installCommands(ctx, login, store, providerId, usage)
   installNativeCheckpointGuard(ctx, provider)
   ctx.logger.info(`dsh-llm-codex-auth-native-compact-image: provider "${provider}" ready (pi-ai ${providerId}; credential ${credentialRef})`)
 }

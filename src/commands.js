@@ -1,15 +1,15 @@
 /**
- * Conversation-side read-only helpers: /codex-status and /codex-logout.
+ * Conversation-side auth helpers: /codex-status, /codex-usage, and /codex-logout.
  *
- * Login itself lives in the settings page (see settings.js) — users do not
- * register from the conversation. These two commands stay as conveniences:
- * both are read-only against the credential store (logout only deletes the
- * stored credential; it never starts a flow). No handler ever prints a token.
+ * Login itself lives in the settings page — users do not register from the
+ * conversation. Usage results are sanitized by the auth-owned transport; no
+ * handler ever receives or prints a token.
  *
  * @module dsh-llm-codex-auth-native-compact-image/commands
  */
+import { formatSubscriptionUsage } from './usage.js'
 
-export function installCommands(ctx, login, store, providerId) {
+export function installCommands(ctx, login, store, providerId, usage) {
   ctx.commands.register({
     name: 'codex-status',
     description: '查看 Codex 订阅登录状态',
@@ -38,11 +38,32 @@ export function installCommands(ctx, login, store, providerId) {
   })
 
   ctx.commands.register({
+    name: 'codex-usage',
+    description: '查看 Codex 订阅剩余用量百分比',
+    input: { hint: '直接按回车刷新用量（无需参数）' },
+    async handler() {
+      const credential = await store.read(providerId)
+      if (credential === undefined) {
+        return { kind: 'error', text: '未登录。请先到设置页的 Codex 订阅区块登录。' }
+      }
+      try {
+        return { kind: 'success', text: formatSubscriptionUsage(await usage.get({ force: true })) }
+      } catch (error) {
+        return {
+          kind: 'error',
+          text: `Codex 订阅用量查询失败：${error instanceof Error ? error.message : String(error)}`,
+        }
+      }
+    },
+  })
+
+  ctx.commands.register({
     name: 'codex-logout',
     description: '登出 ChatGPT 账号并删除本地 OAuth 凭据',
     input: { hint: '直接按回车确认登出（无需参数）' },
     async handler() {
       await login.logout()
+      usage.clear()
       return { kind: 'success', text: '已登出，本地 OAuth 凭据已删除。' }
     },
   })

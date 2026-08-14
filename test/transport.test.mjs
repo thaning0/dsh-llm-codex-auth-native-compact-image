@@ -210,6 +210,36 @@ test('production transport fails closed on a non-ChatGPT backend', async () => {
   )
 })
 
+test('fetchSubscriptionUsage authenticates WHAM and returns only sanitized percentages', async () => {
+  let call
+  const transport = new CodexOAuthTransport(models(), {
+    fetchImpl: async (url, init) => {
+      call = { url, init }
+      return Response.json({
+        plan_type: 'pro',
+        rate_limit: {
+          primary_window: { used_percent: 12, reset_at: 1_800_000_000, limit_window_seconds: 18_000 },
+          secondary_window: { used_percent: 34, reset_at: 1_800_500_000, limit_window_seconds: 604_800 },
+        },
+        private_server_field: ACCESS_TOKEN,
+      })
+    },
+  })
+
+  const usage = await transport.fetchSubscriptionUsage()
+  assert.equal(call.url, 'https://chatgpt.com/backend-api/wham/usage')
+  assert.equal(call.init.method, 'GET')
+  assert.equal(call.init.headers.authorization, `Bearer ${ACCESS_TOKEN}`)
+  assert.equal(call.init.headers['chatgpt-account-id'], ACCOUNT_ID)
+  assert.deepEqual(usage, {
+    planType: 'pro',
+    primary: { usedPercent: 12, remainingPercent: 88, resetAt: 1_800_000_000, windowSeconds: 18_000 },
+    secondary: { usedPercent: 34, remainingPercent: 66, resetAt: 1_800_500_000, windowSeconds: 604_800 },
+  })
+  assert.equal(JSON.stringify(usage).includes(ACCESS_TOKEN), false)
+  assert.equal(JSON.stringify(usage).includes(ACCOUNT_ID), false)
+})
+
 test('explicit test backend accepts loopback only', async () => {
   const seen = []
   const transport = new CodexOAuthTransport(models(), {

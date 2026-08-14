@@ -30,7 +30,7 @@
 - **订阅模型接入**：把 pi-ai 内置的 `openai-codex` provider（`openai-codex-responses` 线上协议）注册为 dsh LLM seam 的 `codex-oauth` 提供方；模型目录随所装 pi-ai 维护（如 `gpt-5.3-codex-spark`、`gpt-5.4`、`gpt-5.5`、`gpt-5.6-*` 等）。
 - **OAuth 设备码登录**：走 `auth.openai.com`（与 Codex CLI 同一 OAuth client），headless 友好，无需本地回调服务器。
 - **凭据安全**：refresh / access token 只存在 dsh 凭据库 `$DSH_HOME/.credentials.yaml`（0600），**不进配置、不进会话日志、不进本仓库**；access token 过期时由 pi-ai 在串行化的写路径里自动用 refresh token 续期。
-- **设置页登录**：在设置页提供「Codex 订阅 (ChatGPT)」区块，含登录 / 登出按钮与实时状态；对话侧仅保留只读的 `/codex-status`、`/codex-logout` 命令。
+- **登录与订阅用量**：设置页「Codex 订阅 (ChatGPT)」区块提供登录 / 登出、5 小时与 7 天窗口的剩余用量百分比、重置时间及手动刷新；对话侧可用 `/codex-status`、`/codex-usage`、`/codex-logout`。
 - **多轮对话**：完整保留 provider 原生回放元数据（签名等），支持跨轮次多轮请求。
 - **多模态图片输入**：对声明 image capability 的 Codex 模型，将用户附件、`read_image` 延迟上下文及工具结果中的 PNG/JPEG/WebP/GIF durable attachment 转成请求期 Responses `input_image` base64 data URL；普通回放、手动/自动 native compact 与 checkpoint replay 使用同一路径，checkpoint 只落 attachment ref、不落图片 base64。
 - **共享原生压缩 transport**：发布不暴露 token 的 `codexOAuthTransport` Cordis 服务；OAuth 刷新、ChatGPT 账号 Header、端点隔离、V2 `compaction_trigger` 与 opaque item 回放全部留在认证插件内部，调用方不会收到凭据材料。
@@ -106,11 +106,11 @@ npx @deepseek-ai/dsh plugin --profile web add file:/path/to/dsh-llm-codex-auth-n
 ## 使用
 
 1. 重启 dsh 后打开**设置页**，侧栏选择「Codex 订阅 (ChatGPT)」。
-2. 点击「登录 ChatGPT 账号」，按提示打开验证网址、输入设备码并登录你的 ChatGPT 账号。
+2. 点击「登录 ChatGPT 账号」，按提示打开验证网址、输入设备码并登录；登录后该区块会显示 5 小时和 7 天窗口的剩余百分比，每分钟自动更新，也可点「刷新用量」。
 3. 新建会话时选择 `Codex Native` agent preset（本机配置可把它设为默认），并在 **Models 设置页**选择 `codex-oauth` 下的模型；已经用 `standard` 创建的旧会话不会热切换 compaction provider。
 4. agent 空闲且至少有两条可压缩 surface 消息时可输入 `/compact`；opaque checkpoint 本身约有千 token 级固定成本，短会话可能因“checkpoint 不比历史更小”而安全拒绝且不替换。正常对话达到模型 context window 的 80% 时会在 step 前自动 native compact，provider 报 context overflow 时也会尝试一次 native compact 后重试。
 5. 展开 GUI 的压缩条目，应看到 `Provider-native Codex compaction checkpoint`；折叠态“已压缩 N 条历史记录”是所有 backend 共用文案，不能单独证明 native。
-6. 登出：回设置页点「登出」，或在对话里输入 `/codex-logout`；`/codex-status` 可随时查看状态。
+6. `/codex-usage` 可在对话中强制刷新并查看剩余百分比；登出可回设置页点「登出」或输入 `/codex-logout`，`/codex-status` 可随时查看登录状态。
 
 ## 工作原理
 
@@ -124,9 +124,10 @@ npx @deepseek-ai/dsh plugin --profile web add file:/path/to/dsh-llm-codex-auth-n
 | `src/native-compact.js` | `/compact` 与跨 provider 的联网前 replay 守卫 |
 | `src/store.js` | pi-ai `CredentialStore` ↔ dsh 凭据库的桥（串行化读写，token 不出宿主） |
 | `src/login.js` | 设备码登录编排（pi-ai 官方流，自动持久化凭据） |
-| `src/server.js` | 宿主 `webServer` 挂 `/codex-oauth` HTTP 路由（status / login / logout），供浏览器半调用 |
-| `src/client.js` | 浏览器半：设置页 `settings.section` 区块，经 `build.mjs` 打包成 client-modules 工厂格式 |
-| `src/commands.js` | 只读命令 `/codex-status`、`/codex-logout` |
+| `src/usage.js` | WHAM 用量响应白名单化、剩余百分比计算、60 秒宿主缓存与命令格式化 |
+| `src/server.js` | 宿主 `webServer` 挂 `/codex-oauth` HTTP 路由（status / usage / login / logout），供浏览器半调用 |
+| `src/client.js` | 浏览器半：设置页登录与用量进度条，经 `build.mjs` 打包成 client-modules 工厂格式 |
+| `src/commands.js` | 命令 `/codex-status`、`/codex-usage`、`/codex-logout` |
 
 ## 开发
 
