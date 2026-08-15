@@ -468,7 +468,7 @@ function classifyError(message) {
   if (/\b5\d\d\b/.test(message) || /\binternal server error\b/i.test(message) || /\ban error occurred while processing your request\b/i.test(message)) return 'SERVER'
   if (/\btime(?:d)?\s*out\b|timeout/i.test(message)) return 'TIMEOUT'
   if (/stream ended (?:before|without)\b/i.test(message)) return 'TRANSPORT'
-  if (/\b(?:network|connection|socket|fetch)\b|\bECONN[A-Z]+\b/i.test(message) || /\b(?:other side closed|HTTP2 request did not get a response|WebSocket closed unexpectedly)\b/i.test(message) || /\bterminated\b|premature close/i.test(message)) return 'TRANSPORT'
+  if (/\b(?:network|connection|socket|fetch|websocket)\b|\bECONN[A-Z]+\b/i.test(message) || /\b(?:other side closed|HTTP2 request did not get a response)\b/i.test(message) || /\bterminated\b|premature close/i.test(message)) return 'TRANSPORT'
   return 'CODEX_ERROR'
 }
 

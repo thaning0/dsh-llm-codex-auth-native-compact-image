@@ -54,6 +54,13 @@ test('canonical Codex processing failure is retryable and keeps its request id',
   assert.equal(finish.reason.failure.requestId, requestId)
 })
 
+test('WebSocket failures are classified as retryable transport errors', async () => {
+  const finish = await finishFor('WebSocket error')
+
+  assert.equal(finish.reason.kind, 'error')
+  assert.equal(finish.reason.failure.code, 'TRANSPORT')
+})
+
 test('unknown Codex failures remain outside automatic retry policy', async () => {
   const finish = await finishFor('Codex error: unsupported conversation state')
 
