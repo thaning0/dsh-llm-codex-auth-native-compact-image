@@ -29,7 +29,7 @@ import {
   isContextWindowExceededError,
   isQuotaExceededError,
 } from '@deepseek-ai/dsh-llm'
-import { getSupportedThinkingLevels, isContextOverflow } from '@earendil-works/pi-ai'
+import { getSupportedThinkingLevels, isContextOverflow, isRetryableAssistantError } from '@earendil-works/pi-ai'
 import {
   NATIVE_COMPACT_REPLAY_CODE,
   assertNativeCompactCompatibility,
@@ -459,23 +459,30 @@ function requestIdFromError(message) {
   return /\brequest ID\s+([A-Za-z0-9_-]+)\b/i.exec(message)?.[1]
 }
 
+const CODEX_CONTEXT_OVERFLOW = /\bcontext[\s_-]+size(?:[\s_-]+has[\s_-]+been)?[\s_-]+exceed(?:ed|s)?\b/i
+
 /** Classify a pi-ai error message into the harness error taxonomy. */
 function classifyError(message) {
   if (/\b(?:401|403)\b/.test(message)) return 'AUTH'
   if (isQuotaExceededError(message)) return QUOTA_EXCEEDED_CODE
-  if (/\b429\b|rate.?limit/i.test(message)) return 'RATE_LIMIT'
+  if (/\b429\b|rate.?limit|too many requests|ResourceExhausted/i.test(message)) return 'RATE_LIMIT'
   if (/\b400\b|invalid.?request/i.test(message)) return 'INVALID_REQUEST'
+  if (/\bmodel (?:does not exist|not found)\b/i.test(message)) return 'UNKNOWN_MODEL'
   if (/\b5\d\d\b/.test(message) || /\binternal server error\b/i.test(message) || /\ban error occurred while processing your request\b/i.test(message)) return 'SERVER'
   if (/\btime(?:d)?\s*out\b|timeout/i.test(message)) return 'TIMEOUT'
-  if (/stream ended (?:before|without)\b/i.test(message)) return 'TRANSPORT'
-  if (/\b(?:network|connection|socket|fetch|websocket)\b|\bECONN[A-Z]+\b/i.test(message) || /\b(?:other side closed|HTTP2 request did not get a response)\b/i.test(message) || /\bterminated\b|premature close/i.test(message)) return 'TRANSPORT'
+  if (/stream ended (?:before|without)\b|\bended without\b/i.test(message)) return 'TRANSPORT'
+  if (/\b(?:network|connection|socket|fetch|websocket)\b|\bECONN[A-Z]+\b|\b(?:ENOTFOUND|EAI_AGAIN|getaddrinfo)\b/i.test(message)) return 'TRANSPORT'
+  if (/\b(?:other side closed|HTTP2 request did not get a response|upstream connect|reset before headers|no response body|failed after retries)\b/i.test(message) || /\bterminated\b|premature close/i.test(message)) return 'TRANSPORT'
+  if (isRetryableAssistantError({ stopReason: 'error', errorMessage: message })) return 'SERVER'
   return 'CODEX_ERROR'
 }
 
 /** Map a terminal pi-ai event to the harness finish reason. */
 function mapStopReason(message, contextWindow) {
   const piAiOverflow = isContextOverflow(message, contextWindow)
-  const harnessOverflow = message.stopReason === 'error' && message.errorMessage !== undefined && isContextWindowExceededError(message.errorMessage)
+  const harnessOverflow = message.stopReason === 'error'
+    && message.errorMessage !== undefined
+    && (isContextWindowExceededError(message.errorMessage) || CODEX_CONTEXT_OVERFLOW.test(message.errorMessage))
   if (piAiOverflow || harnessOverflow) {
     return {
       kind: 'error',
@@ -782,7 +789,13 @@ export class CodexAdapter extends LlmAdapter {
     } catch (error) {
       if (watchdog.timedOut()) throw new LlmError(`codex-oauth stream idle timeout after ${this.#streamIdleTimeoutMs}ms`, 'TIMEOUT', { cause: error })
       if (options.signal?.aborted) throw new LlmError('codex-oauth request aborted by caller', 'ABORTED', { cause: error })
-      throw error
+      if (error instanceof LlmError) throw error
+      const message = error instanceof Error ? error.message : String(error)
+      const requestId = requestIdFromError(message)
+      throw new LlmError(message, classifyError(message), {
+        cause: error,
+        ...(requestId === undefined ? {} : { requestId }),
+      })
     } finally {
       consumer.abort('codex-oauth stream consumer stopped')
     }

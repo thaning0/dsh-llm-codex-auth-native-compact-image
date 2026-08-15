@@ -54,11 +54,60 @@ test('canonical Codex processing failure is retryable and keeps its request id',
   assert.equal(finish.reason.failure.requestId, requestId)
 })
 
-test('WebSocket failures are classified as retryable transport errors', async () => {
-  const finish = await finishFor('WebSocket error')
+test('known transient provider failures enter DSH retry categories', async (t) => {
+  const cases = [
+    ['WebSocket error', 'TRANSPORT'],
+    ['getaddrinfo ENOTFOUND chatgpt.com', 'TRANSPORT'],
+    ['upstream connect error or disconnect/reset before headers', 'TRANSPORT'],
+    ['No response body', 'TRANSPORT'],
+    ['Failed after retries', 'TRANSPORT'],
+    ['OpenAI Responses stream ended before a terminal response event', 'TRANSPORT'],
+    ['Too many requests', 'RATE_LIMIT'],
+    ['ResourceExhausted', 'RATE_LIMIT'],
+    ['Service unavailable', 'SERVER'],
+    ['Provider returned error', 'SERVER'],
+    ['Server requested 60s retry delay', 'SERVER'],
+    ['Please retry your request', 'SERVER'],
+  ]
+
+  for (const [message, code] of cases) await t.test(message, async () => {
+    const finish = await finishFor(message)
+    assert.equal(finish.reason.kind, 'error')
+    assert.equal(finish.reason.failure.code, code)
+  })
+})
+
+test('Codex context-size wording enters compaction recovery instead of blind retry', async () => {
+  const finish = await finishFor('Engine protocol predict stream returned an error: {"code":500,"message":"Context size has been exceeded.","type":"server_error"}')
 
   assert.equal(finish.reason.kind, 'error')
-  assert.equal(finish.reason.failure.code, 'TRANSPORT')
+  assert.equal(finish.reason.failure.code, 'CONTEXT_WINDOW_EXCEEDED')
+})
+
+test('deterministic remote model errors remain non-retryable', async () => {
+  const finish = await finishFor('OpenAI API error (500): Model does not exist.')
+
+  assert.equal(finish.reason.kind, 'error')
+  assert.equal(finish.reason.failure.code, 'UNKNOWN_MODEL')
+})
+
+test('thrown transport errors keep a retryable code at the adapter boundary', async () => {
+  const models = {
+    getModel: (_providerId, modelId) => (modelId === model.id ? model : undefined),
+    getModels: () => [model],
+    streamSimple() {
+      throw new Error('fetch failed: getaddrinfo EAI_AGAIN chatgpt.com')
+    },
+  }
+  const adapter = new CodexAdapter(models, providerId, provider, { streamIdleTimeoutMs: 5000 })
+
+  await assert.rejects(async () => {
+    for await (const _chunk of adapter.stream({
+      provider,
+      model: model.id,
+      messages: [{ role: 'user', content: [{ type: 'text', text: 'continue' }] }],
+    })) {}
+  }, (error) => error.code === 'TRANSPORT')
 })
 
 test('unknown Codex failures remain outside automatic retry policy', async () => {
