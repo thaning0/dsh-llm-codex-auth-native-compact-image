@@ -124,9 +124,9 @@ async function* truncatedEvents() {
   try {
     await collect(adapter, baseOptions())
   } catch (error) {
-    closedOk = error instanceof LlmError && error.failure?.code === 'STREAM_CLOSED'
+    closedOk = error instanceof LlmError && error.failure?.code === 'TRANSPORT'
   }
-  check('T3 truncated stream throws STREAM_CLOSED', closedOk)
+  check('T3 truncated stream throws retryable TRANSPORT', closedOk)
 }
 
 // ── T4: option assembly (headers / reasoning / passthrough) ─────────────────

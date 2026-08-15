@@ -464,14 +464,15 @@ const CODEX_CONTEXT_OVERFLOW = /\bcontext[\s_-]+size(?:[\s_-]+has[\s_-]+been)?[\
 /** Classify a pi-ai error message into the harness error taxonomy. */
 function classifyError(message) {
   if (/\b(?:401|403)\b/.test(message)) return 'AUTH'
-  if (isQuotaExceededError(message)) return QUOTA_EXCEEDED_CODE
-  if (/\b429\b|rate.?limit|too many requests|ResourceExhausted/i.test(message)) return 'RATE_LIMIT'
+  if (isQuotaExceededError(message) || /\byou have hit your chatgpt usage limit\b/i.test(message)) return QUOTA_EXCEEDED_CODE
+  if (/\b429\b|rate.?limit|too many requests|throttl(?:ed|ing)|ResourceExhausted/i.test(message)) return 'RATE_LIMIT'
   if (/\b400\b|invalid.?request/i.test(message)) return 'INVALID_REQUEST'
   if (/\bmodel (?:does not exist|not found)\b/i.test(message)) return 'UNKNOWN_MODEL'
-  if (/\b5\d\d\b/.test(message) || /\binternal server error\b/i.test(message) || /\ban error occurred while processing your request\b/i.test(message)) return 'SERVER'
+  if (/\b5\d\d\b/.test(message) || /\b(?:bad gateway|service unavailable|temporarily unavailable)\b/i.test(message)) return 'SERVER'
+  if (/\b(?:internal server error|overloaded|server_error|internal_error|service_unavailable|temporarily_unavailable|upstream_error)\b/i.test(message) || /\ban error occurred while processing your request\b/i.test(message)) return 'SERVER'
   if (/\btime(?:d)?\s*out\b|timeout/i.test(message)) return 'TIMEOUT'
-  if (/stream ended (?:before|without)\b|\bended without\b/i.test(message)) return 'TRANSPORT'
-  if (/\b(?:network|connection|socket|fetch|websocket)\b|\bECONN[A-Z]+\b|\b(?:ENOTFOUND|EAI_AGAIN|getaddrinfo)\b/i.test(message)) return 'TRANSPORT'
+  if (/stream ended (?:before|without)\b|\bended without\b|\binvalid codex sse json\b/i.test(message)) return 'TRANSPORT'
+  if (/\b(?:network|connection|socket|fetch|websocket)\b|\bECONN[A-Z]+\b|\b(?:EAI_AGAIN|ENOTFOUND|EHOSTUNREACH|ENETUNREACH|EPIPE|UND_ERR_[A-Z_]+|getaddrinfo)\b/i.test(message)) return 'TRANSPORT'
   if (/\b(?:other side closed|HTTP2 request did not get a response|upstream connect|reset before headers|no response body|failed after retries)\b/i.test(message) || /\bterminated\b|premature close/i.test(message)) return 'TRANSPORT'
   if (isRetryableAssistantError({ stopReason: 'error', errorMessage: message })) return 'SERVER'
   return 'CODEX_ERROR'
@@ -527,7 +528,7 @@ function mapStopReason(message, contextWindow) {
 /**
  * Translate the pi-ai event stream into StreamChunks. pi-ai never throws
  * mid-stream — failures arrive as `error` events, which become error/aborted
- * `finish` chunks. Throws STREAM_CLOSED if the source ends without a terminal
+ * `finish` chunks. Throws TRANSPORT if the source ends without a terminal
  * event.
  */
 async function* toStreamChunks(events, contextWindow, providerRoute) {
@@ -592,7 +593,7 @@ async function* toStreamChunks(events, contextWindow, providerRoute) {
         break
     }
   }
-  throw new LlmError('codex-oauth event stream ended without done/error', 'STREAM_CLOSED')
+  throw new LlmError('codex-oauth event stream ended without done/error', 'TRANSPORT')
 }
 
 // ── idle watchdog ───────────────────────────────────────────────────────────

@@ -58,13 +58,21 @@ test('known transient provider failures enter DSH retry categories', async (t) =
   const cases = [
     ['WebSocket error', 'TRANSPORT'],
     ['getaddrinfo ENOTFOUND chatgpt.com', 'TRANSPORT'],
+    ['connect EHOSTUNREACH 203.0.113.1', 'TRANSPORT'],
+    ['write EPIPE', 'TRANSPORT'],
+    ['UND_ERR_SOCKET', 'TRANSPORT'],
     ['upstream connect error or disconnect/reset before headers', 'TRANSPORT'],
     ['No response body', 'TRANSPORT'],
     ['Failed after retries', 'TRANSPORT'],
     ['OpenAI Responses stream ended before a terminal response event', 'TRANSPORT'],
+    ['Invalid Codex SSE JSON: unexpected end of JSON input', 'TRANSPORT'],
     ['Too many requests', 'RATE_LIMIT'],
+    ['Request throttled', 'RATE_LIMIT'],
     ['ResourceExhausted', 'RATE_LIMIT'],
+    ['Bad Gateway', 'SERVER'],
     ['Service unavailable', 'SERVER'],
+    ['temporarily unavailable', 'SERVER'],
+    ['Codex error: upstream_error', 'SERVER'],
     ['Provider returned error', 'SERVER'],
     ['Server requested 60s retry delay', 'SERVER'],
     ['Please retry your request', 'SERVER'],
@@ -84,11 +92,33 @@ test('Codex context-size wording enters compaction recovery instead of blind ret
   assert.equal(finish.reason.failure.code, 'CONTEXT_WINDOW_EXCEEDED')
 })
 
-test('deterministic remote model errors remain non-retryable', async () => {
-  const finish = await finishFor('OpenAI API error (500): Model does not exist.')
+test('deterministic remote model and subscription-limit errors remain non-retryable', async () => {
+  const missingModel = await finishFor('OpenAI API error (500): Model does not exist.')
+  const usageLimit = await finishFor('You have hit your ChatGPT usage limit (plus plan). Try again in ~12 min.')
 
-  assert.equal(finish.reason.kind, 'error')
-  assert.equal(finish.reason.failure.code, 'UNKNOWN_MODEL')
+  assert.equal(missingModel.reason.kind, 'error')
+  assert.equal(missingModel.reason.failure.code, 'UNKNOWN_MODEL')
+  assert.equal(usageLimit.reason.kind, 'error')
+  assert.equal(usageLimit.reason.failure.code, 'QUOTA')
+})
+
+test('a stream that closes without a terminal event is retryable transport failure', async () => {
+  const models = {
+    getModel: (_providerId, modelId) => (modelId === model.id ? model : undefined),
+    getModels: () => [model],
+    async *streamSimple() {
+      yield { type: 'start', partial: null }
+    },
+  }
+  const adapter = new CodexAdapter(models, providerId, provider, { streamIdleTimeoutMs: 5000 })
+
+  await assert.rejects(async () => {
+    for await (const _chunk of adapter.stream({
+      provider,
+      model: model.id,
+      messages: [{ role: 'user', content: [{ type: 'text', text: 'continue' }] }],
+    })) {}
+  }, (error) => error.code === 'TRANSPORT')
 })
 
 test('thrown transport errors keep a retryable code at the adapter boundary', async () => {
